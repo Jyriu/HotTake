@@ -1,18 +1,33 @@
-from datetime import datetime
-from typing import List, Optional
+from __future__ import annotations
 
+from datetime import datetime
+from enum import Enum
+from typing import Optional
+
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
-class Statement(SQLModel, table=True):
+class VoteType(str, Enum):
+    """Allowed vote values."""
+
+    HOT = "hot"
+    BS = "bs"
+
+
+class Vote(SQLModel, table=True):
+    """Represents a single vote cast by a user on a statement."""
+
+    __table_args__ = (UniqueConstraint("voter_id", "statement_id"),)
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    content: str = Field(max_length=280, nullable=False)
+    vote_type: VoteType = Field(nullable=False, description="Either 'hot' or 'bs'.")
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
-    author_id: int | None = Field(foreign_key="user.id", nullable=False)
-    author: "User" = Relationship(back_populates="statements")
+    # foreign keys
+    voter_id: int = Field(foreign_key="user.id", nullable=False)
+    statement_id: int = Field(foreign_key="statement.id", nullable=False)
 
-    hot_votes: int = Field(default=0, nullable=False)
-    bs_votes: int = Field(default=0, nullable=False)
-
-    votes: List["Vote"] = Relationship(back_populates="statement")
+    # relationships
+    voter: "User" = Relationship(back_populates="votes")
+    statement: "Statement" = Relationship(back_populates="votes")
